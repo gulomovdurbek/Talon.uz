@@ -3,12 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Hamkor Bank - Client Terminal</title>
+    <title>Hamkor Bank - Digital Queue</title>
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#008749">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; touch-action: manipulation; }
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
         .text-hamkor { color: #008749; }
         .bg-hamkor { background-color: #008749; }
         .calling-state {
@@ -17,14 +22,17 @@
         }
         @keyframes pulse-green {
             from { box-shadow: inset 0 0 100px rgba(255, 255, 255, 0); }
-            to { box-shadow: inset 0 0 100px rgba(255, 255, 255, 0.2); }
+            to { box-shadow: inset 0 0 100px rgba(255, 255, 255, 0.3); }
         }
-        .fade-in { animation: fadeIn 0.3s ease-out forwards; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .fade-in { animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        
+        /* Стили для кастомной маски ввода */
+        input:focus::placeholder { color: transparent; }
     </style>
 </head>
 <body class="antialiased">
-    <div id="app" class="max-w-md mx-auto min-h-screen bg-white shadow-2xl flex flex-col relative transition-all duration-500">
+    <div id="app" class="max-w-md mx-auto min-h-screen bg-white shadow-2xl flex flex-col relative transition-all duration-700">
         <header class="p-6 border-b bg-white sticky top-0 z-50 flex justify-between items-center">
             <img src="https://marketing.uz/uploads/partners/large/7bb7f92b-3eaf-4127-bb89-f669bc438b84.webp" class="h-8" alt="Hamkor Bank">
             <div class="flex gap-1" id="lang-switcher">
@@ -43,20 +51,23 @@
                 <div class="space-y-6">
                     <div class="space-y-2">
                         <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1" id="txt-label-phone">Номер телефона</label>
-                        <input id="phone" type="tel" class="w-full p-5 bg-slate-50 rounded-2xl border-2 border-transparent focus:border-emerald-500 outline-none text-xl font-bold transition-all" value="+998">
+                        <input id="phone" type="tel" 
+                               class="w-full p-5 bg-slate-50 rounded-2xl border-2 border-transparent focus:border-emerald-500 outline-none text-xl font-bold transition-all" 
+                               placeholder="+998 (__) ___-__-__"
+                               value="+998">
                     </div>
-                    <div class="flex items-start gap-4 p-4 bg-emerald-50/50 rounded-2xl">
-                        <input type="checkbox" id="privacy-check" onchange="window.toggleButtons()" class="w-6 h-6 mt-1 rounded border-emerald-200 text-emerald-600 focus:ring-emerald-500">
-                        <label for="privacy-check" class="text-[10px] text-slate-600 leading-tight italic" id="txt-privacy">
+                    <div class="flex items-start gap-4 p-4 bg-emerald-50/50 rounded-2xl cursor-pointer" onclick="document.getElementById('privacy-check').click()">
+                        <input type="checkbox" id="privacy-check" onchange="window.toggleButtons()" onclick="event.stopPropagation()" class="w-6 h-6 mt-1 rounded border-emerald-200 text-emerald-600 focus:ring-emerald-500">
+                        <label id="txt-privacy" class="text-[10px] text-slate-600 leading-tight italic select-none">
                             Настоящим подтверждаю свое согласие на сбор и обработку персональных данных в соответствии с Законом РУз №ЗРУ-547 «О персональных данных».
                         </label>
                     </div>
                     <div class="grid gap-4 pt-4">
-                        <button onclick="window.takeTicket('💰 Касса', 'K')" id="btn-K" disabled class="opacity-40 cursor-not-allowed bg-hamkor text-white p-6 rounded-3xl font-bold flex justify-between items-center shadow-lg transition-all">
+                        <button onclick="window.takeTicket('💰 Касса', 'K')" id="btn-K" disabled class="opacity-40 cursor-not-allowed bg-hamkor text-white p-6 rounded-3xl font-bold flex justify-between items-center shadow-lg transform active:scale-95 transition-all">
                             <span id="txt-srv-k">Кассовые операции</span>
                             <span class="text-xl">→</span>
                         </button>
-                        <button onclick="window.takeTicket('📄 Кредит', 'C')" id="btn-C" disabled class="opacity-40 cursor-not-allowed bg-slate-800 text-white p-6 rounded-3xl font-bold flex justify-between items-center shadow-lg transition-all">
+                        <button onclick="window.takeTicket('📄 Кредит', 'C')" id="btn-C" disabled class="opacity-40 cursor-not-allowed bg-slate-800 text-white p-6 rounded-3xl font-bold flex justify-between items-center shadow-lg transform active:scale-95 transition-all">
                             <span id="txt-srv-c">Кредитные продукты</span>
                             <span class="text-xl">→</span>
                         </button>
@@ -86,6 +97,25 @@
         let checkInterval = null;
         let timerIntv = null;
         let isTimedOut = false;
+        let lastStatus = null;
+
+        // Инициализация аудиоконтекста (для работы в мобильных браузерах требуется жест пользователя)
+        let audioInited = false;
+        const initAudio = () => {
+            if (audioInited) return;
+            const silence = new (window.AudioContext || window.webkitAudioContext)();
+            silence.resume();
+            audioInited = true;
+        };
+
+        // Маска для телефона
+        document.getElementById('phone').addEventListener('input', function(e) {
+            let x = e.target.value.replace(/\D/g, '').match(/(\d{0,3})(\d{0,2})(\d{0,3})(\d{0,2})(\d{0,2})/);
+            if (!x[1]) { e.target.value = '+'; return; }
+            e.target.value = '+998' + (x[3] ? ' (' + x[2] + ') ' + x[3] : (x[2] ? ' (' + x[2] : ''));
+            if (x[4]) e.target.value += '-' + x[4];
+            if (x[5]) e.target.value += '-' + x[5];
+        });
 
         window.setLanguage = (l) => { currentLang = l; localStorage.setItem('h_lang', l); updateUI(); };
 
@@ -117,14 +147,41 @@
             });
         };
 
+        // Функция звукового уведомления
+        function playNotify() {
+            try {
+                if ("vibrate" in navigator) navigator.vibrate([500, 200, 500]);
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(880, ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(440, ctx.currentTime + 0.5);
+                gain.gain.setValueAtTime(0.1, ctx.currentTime);
+                gain.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.5);
+                osc.start();
+                osc.stop(ctx.currentTime + 0.5);
+            } catch(e) { console.error("Audio error", e); }
+        }
+
         window.takeTicket = async (service, prefix) => {
+            initAudio(); // Активируем звук
             const phone = document.getElementById('phone').value;
-            if (phone.length < 10) return;
+            if (phone.length < 17) return; // Проверка длины маски
+            
             isTimedOut = false;
-            const { count } = await sb.from('tickets').select('*', { count: 'exact', head: true });
+            // Получаем количество тикетов за СЕГОДНЯ для корректного номера
+            const today = new Date().toISOString().split('T')[0];
+            const { count } = await sb.from('tickets')
+                .select('*', { count: 'exact', head: true })
+                .gte('created_at', today);
+
             const code = `${prefix}-${(count || 0) + 1}`;
-            const { data } = await sb.from('tickets').insert([{ phone, service, code, status: 'waiting' }]).select();
-            if (data && data.length > 0) {
+            const { data, error } = await sb.from('tickets').insert([{ phone, service, code, status: 'waiting' }]).select();
+            
+            if (!error && data && data.length > 0) {
                 myTicketId = data[0].id;
                 localStorage.setItem('h_ticket_id', myTicketId);
                 startMonitoring();
@@ -135,7 +192,6 @@
             if (!myTicketId) return;
             const { data, error } = await sb.from('tickets').select('*').eq('id', myTicketId).single();
             if (!error && data) {
-                // Если мы в очереди, посчитаем сколько людей перед нами
                 let peopleBefore = 0;
                 if (data.status === 'waiting') {
                     const { count } = await sb.from('tickets')
@@ -144,6 +200,13 @@
                         .lt('created_at', data.created_at);
                     peopleBefore = count || 0;
                 }
+
+                // Логика уведомления при вызове
+                if (data.status === 'calling' && lastStatus !== 'calling') {
+                    playNotify();
+                }
+                lastStatus = data.status;
+
                 renderState(data, peopleBefore);
             }
         }
@@ -151,7 +214,7 @@
         function startMonitoring() {
             syncStatus();
             if (checkInterval) clearInterval(checkInterval);
-            checkInterval = setInterval(syncStatus, 3000);
+            checkInterval = setInterval(syncStatus, 4000);
             
             sb.channel('ticket-updates')
                 .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'tickets', filter: `id=eq.${myTicketId}` }, (payload) => {
@@ -172,7 +235,11 @@
             
             if (isTimedOut) {
                 app.classList.remove('calling-state');
-                container.innerHTML = `<div class="text-6xl mb-6">⏰</div><h2 class="text-2xl font-black text-slate-900 mb-2">${t.timeout}</h2><p class="text-slate-400 text-sm mb-10">Пожалуйста, получите новый талон.</p><button onclick="window.clearTicket()" class="w-full bg-hamkor text-white py-5 rounded-2xl font-bold uppercase shadow-xl hover:opacity-90 active:scale-95 transition-all">${t.timeoutBtn}</button>`;
+                container.innerHTML = `
+                    <div class="text-6xl mb-6 scale-in">⏰</div>
+                    <h2 class="text-2xl font-black text-slate-900 mb-2">${t.timeout}</h2>
+                    <p class="text-slate-400 text-sm mb-10">Пожалуйста, получите новый талон.</p>
+                    <button onclick="window.clearTicket()" class="w-full bg-hamkor text-white py-5 rounded-2xl font-bold uppercase shadow-xl active:scale-95 transition-all">${t.timeoutBtn}</button>`;
                 return;
             }
 
@@ -181,8 +248,8 @@
                 const estMinutes = (beforeCount + 1) * 5;
                 container.innerHTML = `
                     <p class="text-slate-400 font-bold text-xs uppercase tracking-widest mb-4">Ваш талон</p>
-                    <h2 class="text-8xl font-black text-hamkor mb-8">${ticket.code}</h2>
-                    <div class="bg-emerald-50 p-6 rounded-3xl w-full border border-emerald-100 mb-6">
+                    <h2 class="text-8xl font-black text-hamkor mb-8 tracking-tighter">${ticket.code}</h2>
+                    <div class="bg-emerald-50 p-6 rounded-3xl w-full border border-emerald-100 mb-6 shadow-inner">
                         <p class="text-hamkor font-black animate-pulse mb-1">${t.wait}</p>
                     </div>
                     <div class="grid grid-cols-2 gap-4 w-full">
@@ -198,16 +265,32 @@
                 `;
             } else if (ticket.status === 'calling') {
                 app.classList.add('calling-state');
-                container.innerHTML = `<div class="bg-white/20 p-4 rounded-full mb-8 animate-bounce text-white">🔔</div><h3 class="text-white font-bold mb-4 uppercase tracking-widest">${t.yourTurn}</h3><h2 class="text-9xl font-black text-white mb-8 drop-shadow-xl">${ticket.code}</h2><div class="bg-white p-8 rounded-[40px] w-full shadow-2xl mb-6"><p class="text-hamkor text-2xl font-black">${t.window}</p></div><div class="inline-flex items-center gap-2 bg-red-600 px-6 py-3 rounded-full text-white font-mono font-bold shadow-lg text-lg"><span>${t.timer}:</span><span id="tmr">03:00</span></div>`;
+                container.innerHTML = `
+                    <div class="bg-white/20 p-4 rounded-full mb-8 animate-bounce text-white">🔔</div>
+                    <h3 class="text-white font-bold mb-4 uppercase tracking-widest">${t.yourTurn}</h3>
+                    <h2 class="text-9xl font-black text-white mb-8 drop-shadow-2xl">${ticket.code}</h2>
+                    <div class="bg-white p-8 rounded-[40px] w-full shadow-2xl mb-6">
+                        <p class="text-hamkor text-2xl font-black">${t.window}</p>
+                    </div>
+                    <div class="inline-flex items-center gap-3 bg-red-600 px-8 py-4 rounded-full text-white font-mono font-bold shadow-lg text-xl border-2 border-white/20">
+                        <span class="opacity-70">${t.timer}:</span><span id="tmr">03:00</span>
+                    </div>`;
                 if (ticket.called_at) startTimer(ticket.called_at);
             } else if (ticket.status === 'serving') {
                 app.classList.remove('calling-state');
-                container.innerHTML = `<div class="w-20 h-20 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mb-6 text-3xl">✓</div><h2 class="text-8xl font-black text-hamkor mb-4">${ticket.code}</h2><p class="text-emerald-600 font-bold uppercase text-lg tracking-widest">ОБСЛУЖИВАНИЕ...</p>`;
+                container.innerHTML = `
+                    <div class="w-24 h-24 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mb-6 text-4xl animate-pulse">✓</div>
+                    <h2 class="text-8xl font-black text-hamkor mb-4">${ticket.code}</h2>
+                    <p class="text-emerald-600 font-bold uppercase text-lg tracking-[0.2em]">ОБСЛУЖИВАНИЕ...</p>
+                `;
             } else if (ticket.status === 'completed' || ticket.status === 'cancelled') {
                 app.classList.remove('calling-state');
                 if (checkInterval) clearInterval(checkInterval);
                 if (timerIntv) clearInterval(timerIntv);
-                container.innerHTML = `<div class="text-6xl mb-6">${ticket.status === 'cancelled' ? '❌' : '🤝'}</div><h2 class="text-2xl font-black text-slate-900 mb-10">${ticket.status === 'cancelled' ? 'Талон отменен' : t.thanks}</h2><button onclick="window.clearTicket()" class="w-full bg-hamkor text-white py-5 rounded-2xl font-bold uppercase shadow-xl hover:opacity-90 active:scale-95 transition-all">${t.back}</button>`;
+                container.innerHTML = `
+                    <div class="text-7xl mb-6">${ticket.status === 'cancelled' ? '❌' : '🤝'}</div>
+                    <h2 class="text-2xl font-black text-slate-900 mb-10 leading-tight">${ticket.status === 'cancelled' ? 'Талон отменен' : t.thanks}</h2>
+                    <button onclick="window.clearTicket()" class="w-full bg-hamkor text-white py-5 rounded-2xl font-bold uppercase shadow-xl hover:bg-emerald-700 active:scale-95 transition-all">${t.back}</button>`;
             }
         }
 
@@ -237,6 +320,7 @@
             localStorage.removeItem('h_ticket_id');
             myTicketId = null;
             isTimedOut = false;
+            lastStatus = null;
             if (checkInterval) clearInterval(checkInterval);
             if (timerIntv) clearInterval(timerIntv);
             document.getElementById('phone').value = "+998";
