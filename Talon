@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Hamkor Bank - Client Terminal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; touch-action: manipulation; }
+        .text-hamkor { color: #008749; }
+        .bg-hamkor { background-color: #008749; }
+        .calling-state {
+            background: linear-gradient(135deg, #008749 0%, #005a31 100%);
+            animation: pulse-green 2s infinite alternate;
+        }
+        @keyframes pulse-green {
+            from { box-shadow: inset 0 0 100px rgba(255, 255, 255, 0); }
+            to { box-shadow: inset 0 0 100px rgba(255, 255, 255, 0.2); }
+        }
+        .fade-in { animation: fadeIn 0.3s ease-out forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body class="antialiased">
+    <div id="app" class="max-w-md mx-auto min-h-screen bg-white shadow-2xl flex flex-col relative transition-all duration-500">
+        <header class="p-6 border-b bg-white sticky top-0 z-50 flex justify-between items-center">
+            <img src="https://marketing.uz/uploads/partners/large/7bb7f92b-3eaf-4127-bb89-f669bc438b84.webp" class="h-8" alt="Hamkor Bank">
+            <div class="flex gap-1" id="lang-switcher">
+                <button onclick="window.setLanguage('uz')" id="lang-uz" class="px-3 py-1 text-[10px] font-bold border rounded-lg transition-all">UZ</button>
+                <button onclick="window.setLanguage('ru')" id="lang-ru" class="px-3 py-1 text-[10px] font-bold border rounded-lg transition-all">RU</button>
+                <button onclick="window.setLanguage('en')" id="lang-en" class="px-3 py-1 text-[10px] font-bold border rounded-lg transition-all">EN</button>
+            </div>
+        </header>
+
+        <main class="flex-grow flex flex-col relative">
+            <div id="reg-view" class="p-8 space-y-8 fade-in">
+                <div>
+                    <h1 class="text-3xl font-black text-slate-900" id="txt-reg-title">Электронная очередь</h1>
+                    <p class="text-slate-500 text-sm mt-2" id="txt-reg-desc">Центр банковских услуг</p>
+                </div>
+                <div class="space-y-6">
+                    <div class="space-y-2">
+                        <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1" id="txt-label-phone">Номер телефона</label>
+                        <input id="phone" type="tel" class="w-full p-5 bg-slate-50 rounded-2xl border-2 border-transparent focus:border-emerald-500 outline-none text-xl font-bold transition-all" value="+998">
+                    </div>
+                    <div class="flex items-start gap-4 p-4 bg-emerald-50/50 rounded-2xl">
+                        <input type="checkbox" id="privacy-check" onchange="window.toggleButtons()" class="w-6 h-6 mt-1 rounded border-emerald-200 text-emerald-600 focus:ring-emerald-500">
+                        <label for="privacy-check" class="text-[10px] text-slate-600 leading-tight italic" id="txt-privacy">
+                            Настоящим подтверждаю свое согласие на сбор и обработку персональных данных в соответствии с Законом РУз №ЗРУ-547 «О персональных данных».
+                        </label>
+                    </div>
+                    <div class="grid gap-4 pt-4">
+                        <button onclick="window.takeTicket('💰 Касса', 'K')" id="btn-K" disabled class="opacity-40 cursor-not-allowed bg-hamkor text-white p-6 rounded-3xl font-bold flex justify-between items-center shadow-lg transition-all">
+                            <span id="txt-srv-k">Кассовые операции</span>
+                            <span class="text-xl">→</span>
+                        </button>
+                        <button onclick="window.takeTicket('📄 Кредит', 'C')" id="btn-C" disabled class="opacity-40 cursor-not-allowed bg-slate-800 text-white p-6 rounded-3xl font-bold flex justify-between items-center shadow-lg transition-all">
+                            <span id="txt-srv-c">Кредитные продукты</span>
+                            <span class="text-xl">→</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="status-view" class="hidden flex-grow flex flex-col fade-in">
+                <div id="status-content" class="flex-grow flex flex-col items-center justify-center text-center p-8"></div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://agjoyykfosnttniilxqx.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFnam95eWtmb3NudHRuaWlseHF4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIwMDI2NzUsImV4cCI6MjA4NzU3ODY3NX0.4_tl_Zn5Ylv3_WQ5Sy7Wfjz-YNaSVDdpQva4uUDUs0s';
+        const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        const langData = {
+            uz: { regTitle: "Elektron navbat", regDesc: "Bank xizmatlari markazi", labelPhone: "Telefon raqami", privacy: "O‘zbekiston Respublikasining «Shaxsga doir ma’lumotlar to‘g‘risida»gi Qonuniga muvofiq shaxsiy ma’lumotlarimni qayta ishlashga rozilik beraman.", srvK: "Kassa operatsiyalari", srvC: "Kredit mahsulotlari", wait: "NAVBTINGIZNI KUTING", yourTurn: "SIZNI CHAQIRISHMOQDA!", window: "1-DARCHAGA MARHAMAT", thanks: "Tashrif uchun rahmat!", back: "YANGI TALON", timer: "VAQT", timeout: "Chaqiruv vaqti tugadi", timeoutBtn: "Yangi talon olish", queueInfo: "Sizdan oldin", timeInfo: "Taxminiy kutish vaqti", min: "daq." },
+            ru: { regTitle: "Электронная очередь", regDesc: "Центр банковских услуг", labelPhone: "Номер телефона", privacy: "Настоящим подтверждаю свое согласие на сбор и обработку персональных данных в соответствии с Законом РУз №ЗРУ-547 «О персональных данных».", srvK: "Кассовые операции", srvC: "Кредитные продукты", wait: "ОЖИДАЙТЕ ВЫЗОВА", yourTurn: "ВАША ОЧЕРЕДЬ!", window: "ПРОЙДИТЕ К ОКНУ №1", thanks: "Спасибо за визит!", back: "НОВЫЙ ТАЛОН", timer: "ТАЙМЕР", timeout: "Время вызова истекло", timeoutBtn: "Получить новый талон", queueInfo: "Перед вами", timeInfo: "Примерное время ожидания", min: "мин." },
+            en: { regTitle: "E-Queue", regDesc: "Banking Services Center", labelPhone: "Phone Number", privacy: "I hereby consent to the collection and processing of my personal data in accordance with the Law of the Republic of Uzbekistan No. ZRU-547 'On Personal Data'.", srvK: "Cashier Operations", srvC: "Credit Products", wait: "PLEASE WAIT", yourTurn: "YOUR TURN!", window: "PROCEED TO WINDOW №1", thanks: "Thank you for visiting!", back: "NEW TICKET", timer: "TIMER", timeout: "Call time expired", timeoutBtn: "Get new ticket", queueInfo: "People before you", timeInfo: "Estimated wait time", min: "min." }
+        };
+
+        let currentLang = localStorage.getItem('h_lang') || 'ru';
+        let myTicketId = localStorage.getItem('h_ticket_id');
+        let checkInterval = null;
+        let timerIntv = null;
+        let isTimedOut = false;
+
+        window.setLanguage = (l) => { currentLang = l; localStorage.setItem('h_lang', l); updateUI(); };
+
+        function updateUI() {
+            const t = langData[currentLang];
+            document.getElementById('txt-reg-title').innerText = t.regTitle;
+            document.getElementById('txt-reg-desc').innerText = t.regDesc;
+            document.getElementById('txt-label-phone').innerText = t.labelPhone;
+            document.getElementById('txt-privacy').innerText = t.privacy;
+            document.getElementById('txt-srv-k').innerText = t.srvK;
+            document.getElementById('txt-srv-c').innerText = t.srvC;
+
+            ['uz','ru','en'].forEach(l => {
+                const btn = document.getElementById(`lang-${l}`);
+                if (btn) btn.className = (l === currentLang) ? "px-3 py-1 text-[10px] font-bold border rounded-lg bg-hamkor text-white" : "px-3 py-1 text-[10px] font-bold border rounded-lg text-slate-400";
+            });
+            if (myTicketId) syncStatus();
+        }
+
+        window.toggleButtons = () => {
+            const ok = document.getElementById('privacy-check').checked;
+            ['btn-K','btn-C'].forEach(id => {
+                const b = document.getElementById(id);
+                if (b) {
+                    b.disabled = !ok;
+                    b.style.opacity = ok ? "1" : "0.4";
+                    b.style.cursor = ok ? "pointer" : "not-allowed";
+                }
+            });
+        };
+
+        window.takeTicket = async (service, prefix) => {
+            const phone = document.getElementById('phone').value;
+            if (phone.length < 10) return;
+            isTimedOut = false;
+            const { count } = await sb.from('tickets').select('*', { count: 'exact', head: true });
+            const code = `${prefix}-${(count || 0) + 1}`;
+            const { data } = await sb.from('tickets').insert([{ phone, service, code, status: 'waiting' }]).select();
+            if (data && data.length > 0) {
+                myTicketId = data[0].id;
+                localStorage.setItem('h_ticket_id', myTicketId);
+                startMonitoring();
+            }
+        };
+
+        async function syncStatus() {
+            if (!myTicketId) return;
+            const { data, error } = await sb.from('tickets').select('*').eq('id', myTicketId).single();
+            if (!error && data) {
+                // Если мы в очереди, посчитаем сколько людей перед нами
+                let peopleBefore = 0;
+                if (data.status === 'waiting') {
+                    const { count } = await sb.from('tickets')
+                        .select('*', { count: 'exact', head: true })
+                        .eq('status', 'waiting')
+                        .lt('created_at', data.created_at);
+                    peopleBefore = count || 0;
+                }
+                renderState(data, peopleBefore);
+            }
+        }
+
+        function startMonitoring() {
+            syncStatus();
+            if (checkInterval) clearInterval(checkInterval);
+            checkInterval = setInterval(syncStatus, 3000);
+            
+            sb.channel('ticket-updates')
+                .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'tickets', filter: `id=eq.${myTicketId}` }, (payload) => {
+                    syncStatus();
+                })
+                .subscribe();
+        }
+
+        function renderState(ticket, beforeCount = 0) {
+            const container = document.getElementById('status-content');
+            const regView = document.getElementById('reg-view');
+            const statusView = document.getElementById('status-view');
+            const app = document.getElementById('app');
+            const t = langData[currentLang];
+
+            if (regView) regView.classList.add('hidden');
+            if (statusView) statusView.classList.remove('hidden');
+            
+            if (isTimedOut) {
+                app.classList.remove('calling-state');
+                container.innerHTML = `<div class="text-6xl mb-6">⏰</div><h2 class="text-2xl font-black text-slate-900 mb-2">${t.timeout}</h2><p class="text-slate-400 text-sm mb-10">Пожалуйста, получите новый талон.</p><button onclick="window.clearTicket()" class="w-full bg-hamkor text-white py-5 rounded-2xl font-bold uppercase shadow-xl hover:opacity-90 active:scale-95 transition-all">${t.timeoutBtn}</button>`;
+                return;
+            }
+
+            if (ticket.status === 'waiting') {
+                app.classList.remove('calling-state');
+                const estMinutes = (beforeCount + 1) * 5;
+                container.innerHTML = `
+                    <p class="text-slate-400 font-bold text-xs uppercase tracking-widest mb-4">Ваш талон</p>
+                    <h2 class="text-8xl font-black text-hamkor mb-8">${ticket.code}</h2>
+                    <div class="bg-emerald-50 p-6 rounded-3xl w-full border border-emerald-100 mb-6">
+                        <p class="text-hamkor font-black animate-pulse mb-1">${t.wait}</p>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4 w-full">
+                        <div class="bg-slate-50 p-4 rounded-2xl border border-slate-100 text-left">
+                            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-tighter mb-1">${t.queueInfo}</p>
+                            <p class="text-2xl font-black text-slate-800">${beforeCount}</p>
+                        </div>
+                        <div class="bg-slate-50 p-4 rounded-2xl border border-slate-100 text-left">
+                            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-tighter mb-1">${t.timeInfo}</p>
+                            <p class="text-2xl font-black text-slate-800">~${estMinutes} ${t.min}</p>
+                        </div>
+                    </div>
+                `;
+            } else if (ticket.status === 'calling') {
+                app.classList.add('calling-state');
+                container.innerHTML = `<div class="bg-white/20 p-4 rounded-full mb-8 animate-bounce text-white">🔔</div><h3 class="text-white font-bold mb-4 uppercase tracking-widest">${t.yourTurn}</h3><h2 class="text-9xl font-black text-white mb-8 drop-shadow-xl">${ticket.code}</h2><div class="bg-white p-8 rounded-[40px] w-full shadow-2xl mb-6"><p class="text-hamkor text-2xl font-black">${t.window}</p></div><div class="inline-flex items-center gap-2 bg-red-600 px-6 py-3 rounded-full text-white font-mono font-bold shadow-lg text-lg"><span>${t.timer}:</span><span id="tmr">03:00</span></div>`;
+                if (ticket.called_at) startTimer(ticket.called_at);
+            } else if (ticket.status === 'serving') {
+                app.classList.remove('calling-state');
+                container.innerHTML = `<div class="w-20 h-20 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mb-6 text-3xl">✓</div><h2 class="text-8xl font-black text-hamkor mb-4">${ticket.code}</h2><p class="text-emerald-600 font-bold uppercase text-lg tracking-widest">ОБСЛУЖИВАНИЕ...</p>`;
+            } else if (ticket.status === 'completed' || ticket.status === 'cancelled') {
+                app.classList.remove('calling-state');
+                if (checkInterval) clearInterval(checkInterval);
+                if (timerIntv) clearInterval(timerIntv);
+                container.innerHTML = `<div class="text-6xl mb-6">${ticket.status === 'cancelled' ? '❌' : '🤝'}</div><h2 class="text-2xl font-black text-slate-900 mb-10">${ticket.status === 'cancelled' ? 'Талон отменен' : t.thanks}</h2><button onclick="window.clearTicket()" class="w-full bg-hamkor text-white py-5 rounded-2xl font-bold uppercase shadow-xl hover:opacity-90 active:scale-95 transition-all">${t.back}</button>`;
+            }
+        }
+
+        function startTimer(startTimeStr) {
+            if (timerIntv) clearInterval(timerIntv);
+            const callTime = new Date(startTimeStr).getTime();
+            function update() {
+                const now = Date.now();
+                const totalSec = 180;
+                const elapsedSec = Math.floor((now - callTime) / 1000);
+                const remaining = Math.max(0, totalSec - elapsedSec);
+                const mins = Math.floor(remaining / 60);
+                const secs = remaining % 60;
+                const el = document.getElementById('tmr');
+                if (el) el.innerText = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+                if (remaining <= 0) {
+                    clearInterval(timerIntv);
+                    isTimedOut = true;
+                    syncStatus();
+                }
+            }
+            update();
+            timerIntv = setInterval(update, 1000);
+        }
+
+        window.clearTicket = () => {
+            localStorage.removeItem('h_ticket_id');
+            myTicketId = null;
+            isTimedOut = false;
+            if (checkInterval) clearInterval(checkInterval);
+            if (timerIntv) clearInterval(timerIntv);
+            document.getElementById('phone').value = "+998";
+            document.getElementById('privacy-check').checked = false;
+            window.toggleButtons();
+            document.getElementById('status-view').classList.add('hidden');
+            document.getElementById('reg-view').classList.remove('hidden');
+            document.getElementById('app').classList.remove('calling-state');
+        };
+
+        updateUI();
+        if (myTicketId) startMonitoring();
+    </script>
+</body>
+</html>
