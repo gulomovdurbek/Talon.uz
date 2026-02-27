@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Hamkor Bank - Digital Queue</title>
-    <!-- PWA Meta Tags -->
     <meta name="theme-color" content="#008749">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -27,7 +26,6 @@
         .fade-in { animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
         
-        /* Стили для кастомной маски ввода */
         input:focus::placeholder { color: transparent; }
     </style>
 </head>
@@ -99,7 +97,6 @@
         let isTimedOut = false;
         let lastStatus = null;
 
-        // Инициализация аудиоконтекста (для работы в мобильных браузерах требуется жест пользователя)
         let audioInited = false;
         const initAudio = () => {
             if (audioInited) return;
@@ -108,7 +105,6 @@
             audioInited = true;
         };
 
-        // Маска для телефона
         document.getElementById('phone').addEventListener('input', function(e) {
             let x = e.target.value.replace(/\D/g, '').match(/(\d{0,3})(\d{0,2})(\d{0,3})(\d{0,2})(\d{0,2})/);
             if (!x[1]) { e.target.value = '+'; return; }
@@ -147,7 +143,6 @@
             });
         };
 
-        // Функция звукового уведомления
         function playNotify() {
             try {
                 if ("vibrate" in navigator) navigator.vibrate([500, 200, 500]);
@@ -167,12 +162,11 @@
         }
 
         window.takeTicket = async (service, prefix) => {
-            initAudio(); // Активируем звук
+            initAudio();
             const phone = document.getElementById('phone').value;
-            if (phone.length < 17) return; // Проверка длины маски
+            if (phone.length < 17) return; 
             
             isTimedOut = false;
-            // Получаем количество тикетов за СЕГОДНЯ для корректного номера
             const today = new Date().toISOString().split('T')[0];
             const { count } = await sb.from('tickets')
                 .select('*', { count: 'exact', head: true })
@@ -201,7 +195,6 @@
                     peopleBefore = count || 0;
                 }
 
-                // Логика уведомления при вызове
                 if (data.status === 'calling' && lastStatus !== 'calling') {
                     playNotify();
                 }
@@ -297,15 +290,24 @@
         function startTimer(startTimeStr) {
             if (timerIntv) clearInterval(timerIntv);
             const callTime = new Date(startTimeStr).getTime();
+            
             function update() {
                 const now = Date.now();
                 const totalSec = 180;
+                // Считаем разницу во времени
                 const elapsedSec = Math.floor((now - callTime) / 1000);
-                const remaining = Math.max(0, totalSec - elapsedSec);
+                // Убеждаемся, что не уходим в минус
+                const correctedElapsed = Math.max(0, elapsedSec);
+                const remaining = Math.max(0, totalSec - correctedElapsed);
+                
                 const mins = Math.floor(remaining / 60);
-                const secs = remaining % 60;
+                const secs = Math.floor(remaining % 60);
+                
                 const el = document.getElementById('tmr');
-                if (el) el.innerText = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+                if (el) {
+                    el.innerText = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+                }
+                
                 if (remaining <= 0) {
                     clearInterval(timerIntv);
                     isTimedOut = true;
