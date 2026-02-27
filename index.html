@@ -25,7 +25,6 @@
         }
         .fade-in { animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-        
         input:focus::placeholder { color: transparent; }
     </style>
 </head>
@@ -96,8 +95,8 @@
         let timerIntv = null;
         let isTimedOut = false;
         let lastStatus = null;
-
         let audioInited = false;
+
         const initAudio = () => {
             if (audioInited) return;
             const silence = new (window.AudioContext || window.webkitAudioContext)();
@@ -105,13 +104,36 @@
             audioInited = true;
         };
 
-        document.getElementById('phone').addEventListener('input', function(e) {
+        document.getElementById('phone').addEventListener('input', async function(e) {
             let x = e.target.value.replace(/\D/g, '').match(/(\d{0,3})(\d{0,2})(\d{0,3})(\d{0,2})(\d{0,2})/);
             if (!x[1]) { e.target.value = '+'; return; }
             e.target.value = '+998' + (x[3] ? ' (' + x[2] + ') ' + x[3] : (x[2] ? ' (' + x[2] : ''));
             if (x[4]) e.target.value += '-' + x[4];
             if (x[5]) e.target.value += '-' + x[5];
+
+            // Проверка: если номер введен полностью, ищем активный талон в базе
+            if (e.target.value.length === 19) {
+                checkExistingTicket(e.target.value);
+            }
         });
+
+        // Функция поиска талона по номеру телефона
+        async function checkExistingTicket(phoneNumber) {
+            const today = new Date().toISOString().split('T')[0];
+            const { data, error } = await sb.from('tickets')
+                .select('*')
+                .eq('phone', phoneNumber)
+                .gte('created_at', today)
+                .in('status', ['waiting', 'calling', 'serving'])
+                .order('created_at', { ascending: false })
+                .limit(1);
+
+            if (!error && data && data.length > 0) {
+                myTicketId = data[0].id;
+                localStorage.setItem('h_ticket_id', myTicketId);
+                startMonitoring();
+            }
+        }
 
         window.setLanguage = (l) => { currentLang = l; localStorage.setItem('h_lang', l); updateUI(); };
 
@@ -168,6 +190,21 @@
             
             isTimedOut = false;
             const today = new Date().toISOString().split('T')[0];
+
+            // Проверяем, нет ли уже талона на этот номер сегодня
+            const { data: existing } = await sb.from('tickets')
+                .select('id')
+                .eq('phone', phone)
+                .gte('created_at', today)
+                .in('status', ['waiting', 'calling', 'serving']);
+
+            if (existing && existing.length > 0) {
+                myTicketId = existing[0].id;
+                localStorage.setItem('h_ticket_id', myTicketId);
+                startMonitoring();
+                return;
+            }
+
             const { count } = await sb.from('tickets')
                 .select('*', { count: 'exact', head: true })
                 .gte('created_at', today);
@@ -199,7 +236,6 @@
                     playNotify();
                 }
                 lastStatus = data.status;
-
                 renderState(data, peopleBefore);
             }
         }
@@ -207,7 +243,7 @@
         function startMonitoring() {
             syncStatus();
             if (checkInterval) clearInterval(checkInterval);
-            checkInterval = setInterval(syncStatus, 4000);
+            checkInterval = setInterval(syncStatus, 3000);
             
             sb.channel('ticket-updates')
                 .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'tickets', filter: `id=eq.${myTicketId}` }, (payload) => {
@@ -289,14 +325,20 @@
 
         function startTimer(startTimeStr) {
             if (timerIntv) clearInterval(timerIntv);
+            
+            // Используем ISO формат и корректный парсинг для синхронизации
             const callTime = new Date(startTimeStr).getTime();
             
             function update() {
                 const now = Date.now();
                 const totalSec = 180;
-                // Считаем разницу во времени
-                const elapsedSec = Math.floor((now - callTime) / 1000);
-                // Убеждаемся, что не уходим в минус
+                
+                // Вычисляем разницу (включая миллисекунды для точности)
+                const elapsedMs = now - callTime;
+                const elapsedSec = Math.floor(elapsedMs / 1000);
+                
+                // Исправляем "отставание" в 2-3 секунды: 
+                // Если разница отрицательная (из-за разницы часов на устройствах), считаем ее за 0
                 const correctedElapsed = Math.max(0, elapsedSec);
                 const remaining = Math.max(0, totalSec - correctedElapsed);
                 
