@@ -43,7 +43,6 @@
         }
         #toast.show { transform: translateX(-50%) translateY(0); }
         
-        /* Анимация загрузки для кнопок */
         .loading-btn { position: relative; color: transparent !important; pointer-events: none; }
         .loading-btn::after {
             content: ""; position: absolute; width: 24px; height: 24px; top: 50%; left: 50%;
@@ -51,6 +50,9 @@
             border-top-color: white; border-radius: 50%; animation: spin 0.8s linear infinite;
         }
         @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Стиль для текста согласия */
+        .policy-box { max-height: 80px; overflow-y: auto; font-size: 9px; line-height: 1.2; }
     </style>
 </head>
 <body class="antialiased">
@@ -78,14 +80,18 @@
                                placeholder="+998 (__) ___-__-__"
                                value="+998">
                     </div>
-                    <div class="flex items-start gap-4 p-4 bg-emerald-50/50 rounded-2xl cursor-pointer" onclick="document.getElementById('privacy-check').click()">
-                        <input type="checkbox" id="privacy-check" onchange="window.toggleButtons()" onclick="event.stopPropagation()" class="w-6 h-6 mt-1 rounded border-emerald-200 text-emerald-600 focus:ring-emerald-500">
-                        <label id="txt-privacy" class="text-[10px] text-slate-600 leading-tight italic select-none">
-                            Настоящим подтверждаю свое согласие на сбор и обработку персональных данных в соответствии с Законом РУз №ЗРУ-547 «О персональных данных».
-                        </label>
+                    
+                    <div class="p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                        <div class="policy-box text-slate-500 mb-3 pr-2" id="txt-policy-full">
+                            Настоящим, в соответствии с Законом РУз №ЗРУ-547 «О персональных данных», я даю согласие АКБ «Hamkorbank» на сбор, систематизацию, накопление, хранение и обработку моих персональных данных, указанных при регистрации, для целей предоставления банковских услуг и уведомления о статусе очереди.
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <input type="checkbox" id="privacy-check" onchange="window.toggleButtons()" class="w-5 h-5 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500">
+                            <label for="privacy-check" id="txt-privacy" class="text-[11px] font-semibold text-slate-700 select-none">Я подтверждаю свое согласие</label>
+                        </div>
                     </div>
                     
-                    <div class="grid gap-3 pt-4" id="services-grid">
+                    <div class="grid gap-3 pt-2" id="services-grid">
                         <button onclick="window.takeTicket('💰 Касса', 'K', this)" id="btn-K" disabled class="opacity-40 cursor-not-allowed bg-hamkor text-white p-5 rounded-3xl font-bold flex justify-between items-center shadow-lg transform active:scale-95 transition-all">
                             <span id="txt-srv-k">Кассовые операции</span>
                             <span class="text-xl">→</span>
@@ -124,17 +130,21 @@
         const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         const langData = {
-            uz: { regTitle: "Elektron navbat", regDesc: "Bank xizmatlari markazi", labelPhone: "Telefon raqami", privacy: "Rozilik beraman.", srvK: "Kassa operatsiyalari", srvC: "Kredit mahsulotlari", srvB: "Bank kartalari", srvE: "Valyuta ayirboshlash", srvT: "Pul o'tkazmalari", wait: "NAVBTINGIZNI KUTING", yourTurn: "SIZNI CHAQIRISHMOQDA!", window: "1-DARCHAGA MARHAMAT", thanks: "Tashrif uchun rahmat!", back: "YANGI TALON", timer: "VAQT", timeout: "Vaqt tugadi", timeoutBtn: "Yangi talon olish", queueInfo: "Sizdan oldin", timeInfo: "Kutish vaqti", min: "daq.", toast: "Faol taloningiz topildi" },
-            ru: { regTitle: "Электронная очередь", regDesc: "Центр банковских услуг", labelPhone: "Номер телефона", privacy: "Согласие на обработку данных.", srvK: "Кассовые операции", srvC: "Кредитные продукты", srvB: "Банковские карты", srvE: "Обмен валюты", srvT: "Денежные переводы", wait: "ОЖИДАЙТЕ ВЫЗОВА", yourTurn: "ВАША ОЧЕРЕДЬ!", window: "ПРОЙДИТЕ К ОКНУ №1", thanks: "Спасибо за визит!", back: "НОВЫЙ ТАЛОН", timer: "ТАЙМЕР", timeout: "Время истекло", timeoutBtn: "Получить новый талон", queueInfo: "Перед вами", timeInfo: "Ожидание", min: "мин.", toast: "Найден активный талон" },
-            en: { regTitle: "E-Queue", regDesc: "Banking Services Center", labelPhone: "Phone Number", privacy: "Consent to data processing.", srvK: "Cashier Operations", srvC: "Credit Products", srvB: "Bank Cards", srvE: "Currency Exchange", srvT: "Money Transfers", wait: "PLEASE WAIT", yourTurn: "YOUR TURN!", window: "PROCEED TO WINDOW №1", thanks: "Thank you!", back: "NEW TICKET", timer: "TIMER", timeout: "Expired", timeoutBtn: "New ticket", queueInfo: "People before you", timeInfo: "Wait time", min: "min.", toast: "Active ticket found" }
+            uz: { regTitle: "Elektron navbat", regDesc: "Bank xizmatlari markazi", labelPhone: "Telefon raqami", privacy: "Men o'z roziligimni tasdiqlayman", policy: "O'zbekiston Respublikasining «Shaxsiy ma'lumotlar to'g'risida»gi O'RQ-547-sonli Qonuniga muvofiq, men «Hamkorbank» ATBga ro'yxatdan o'tishda ko'rsatilgan shaxsiy ma'lumotlarimni yig'ish va qayta ishlashga rozilik beraman.", srvK: "Kassa operatsiyalari", srvC: "Kredit mahsulotlari", srvB: "Bank kartalari", srvE: "Valyuta ayirboshlash", srvT: "Pul o'tkazmalari", wait: "NAVBTINGIZNI KUTING", yourTurn: "SIZNI CHAQIRISHMOQDA!", window: "1-DARCHAGA MARHAMAT", thanks: "Tashrif uchun rahmat!", back: "YANGI TALON", timer: "VAQT", timeout: "Vaqt tugadi", timeoutBtn: "Yangi talon olish", queueInfo: "Sizdan oldin", timeInfo: "Kutish vaqti", min: "daq.", toast: "Faol taloningiz topildi" },
+            ru: { regTitle: "Электронная очередь", regDesc: "Центр банковских услуг", labelPhone: "Номер телефона", privacy: "Я подтверждаю свое согласие", policy: "В соответствии с Законом РУз №ЗРУ-547 «О персональных данных», я даю согласие АКБ «Hamkorbank» на сбор и обработку моих персональных данных для предоставления банковских услуг.", srvK: "Кассовые операции", srvC: "Кредитные продукты", srvB: "Банковские карты", srvE: "Обмен валюты", srvT: "Денежные переводы", wait: "ОЖИДАЙТЕ ВЫЗОВА", yourTurn: "ВАША ОЧЕРЕДЬ!", window: "ПРОЙДИТЕ К ОКНУ №1", thanks: "Спасибо за визит!", back: "НОВЫЙ ТАЛОН", timer: "ТАЙМЕР", timeout: "Время истекло", timeoutBtn: "Получить новый талон", queueInfo: "Перед вами", timeInfo: "Ожидание", min: "мин.", toast: "Найден активный талон" },
+            en: { regTitle: "E-Queue", regDesc: "Banking Services Center", labelPhone: "Phone Number", privacy: "I confirm my consent", policy: "In accordance with the Law of the Republic of Uzbekistan No. ZRU-547 'On Personal Data', I consent to Hamkorbank JSC for the collection and processing of my personal data.", srvK: "Cashier Operations", srvC: "Credit Products", srvB: "Bank Cards", srvE: "Currency Exchange", srvT: "Money Transfers", wait: "PLEASE WAIT", yourTurn: "YOUR TURN!", window: "PROCEED TO WINDOW №1", thanks: "Thank you!", back: "NEW TICKET", timer: "TIMER", timeout: "Expired", timeoutBtn: "New ticket", queueInfo: "People before you", timeInfo: "Wait time", min: "min.", toast: "Active ticket found" }
         };
 
         let currentLang = localStorage.getItem('h_lang') || 'ru';
         let myTicketId = localStorage.getItem('h_ticket_id');
         let checkInterval = null;
-        let timerIntv = null;
-        let isTimedOut = false;
+        let countdownTimer = null;
+        let timeLeft = 180; // 3 минуты в секундах
         let lastStatus = null;
+        let isTimedOut = false;
+
+        // Звуковой эффект
+        const alertSound = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
 
         function showToast(msg) {
             const t = document.getElementById('toast');
@@ -159,6 +169,7 @@
             document.getElementById('txt-reg-desc').innerText = t.regDesc;
             document.getElementById('txt-label-phone').innerText = t.labelPhone;
             document.getElementById('txt-privacy').innerText = t.privacy;
+            document.getElementById('txt-policy-full').innerText = t.policy;
             document.getElementById('txt-srv-k').innerText = t.srvK;
             document.getElementById('txt-srv-c').innerText = t.srvC;
             document.getElementById('txt-srv-b').innerText = t.srvB;
@@ -167,7 +178,15 @@
 
             ['uz','ru','en'].forEach(l => {
                 const btn = document.getElementById(`lang-${l}`);
-                if (btn) btn.className = (l === currentLang) ? "px-3 py-1 text-[10px] font-bold border rounded-lg bg-hamkor text-white" : "px-3 py-1 text-[10px] font-bold border rounded-lg text-slate-400";
+                if (btn) {
+                    if (l === currentLang) {
+                        btn.classList.add('bg-hamkor', 'text-white', 'border-hamkor');
+                        btn.classList.remove('text-slate-400');
+                    } else {
+                        btn.classList.remove('bg-hamkor', 'text-white', 'border-hamkor');
+                        btn.classList.add('text-slate-400');
+                    }
+                }
             });
             if (myTicketId) syncStatus();
         }
@@ -187,10 +206,9 @@
         window.takeTicket = async (service, prefix, btnElement) => {
             const phone = document.getElementById('phone').value;
             if (phone.length < 17) return; 
-            
-            // Убираем задержку: визуально сразу блокируем кнопку
             if (btnElement) btnElement.classList.add('loading-btn');
             isTimedOut = false;
+            timeLeft = 180;
 
             try {
                 const { data: existingTicket } = await sb
@@ -230,6 +248,11 @@
             if (!myTicketId) return;
             const { data, error } = await sb.from('tickets').select('*').eq('id', myTicketId).single();
             if (!error && data) {
+                if (data.status === 'calling' && lastStatus !== 'calling') {
+                    alertSound.play().catch(e => console.log("Audio play blocked"));
+                    startTimer();
+                }
+                
                 let peopleBefore = 0;
                 if (data.status === 'waiting') {
                     const { count } = await sb.from('tickets').select('*', { count: 'exact', head: true }).eq('status', 'waiting').lt('created_at', data.created_at);
@@ -240,11 +263,31 @@
             }
         }
 
+        function startTimer() {
+            if (countdownTimer) clearInterval(countdownTimer);
+            timeLeft = 180; 
+            countdownTimer = setInterval(() => {
+                timeLeft--;
+                if (timeLeft <= 0) {
+                    clearInterval(countdownTimer);
+                    isTimedOut = true;
+                    syncStatus();
+                }
+                const timerEl = document.getElementById('timer-display');
+                if (timerEl) timerEl.innerText = formatTime(timeLeft);
+            }, 1000);
+        }
+
+        function formatTime(seconds) {
+            const m = Math.floor(seconds / 60);
+            const s = seconds % 60;
+            return `${m}:${s < 10 ? '0' : ''}${s}`;
+        }
+
         function startMonitoring() {
             syncStatus();
             if (checkInterval) clearInterval(checkInterval);
             checkInterval = setInterval(syncStatus, 4000);
-            sb.channel('ticket-updates').on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'tickets', filter: `id=eq.${myTicketId}` }, () => syncStatus()).subscribe();
         }
 
         function renderState(ticket, beforeCount = 0) {
@@ -258,7 +301,8 @@
             if (statusView) statusView.classList.remove('hidden');
             
             if (isTimedOut) {
-                container.innerHTML = `<h2 class="text-2xl font-black mb-10">${t.timeout}</h2><button onclick="window.clearTicket()" class="w-full bg-hamkor text-white py-5 rounded-2xl font-bold shadow-xl">${t.timeoutBtn}</button>`;
+                app.classList.remove('calling-state');
+                container.innerHTML = `<div class="text-6xl mb-6">⏰</div><h2 class="text-2xl font-black mb-10 text-slate-800">${t.timeout}</h2><button onclick="window.clearTicket()" class="w-full bg-hamkor text-white py-5 rounded-2xl font-bold shadow-xl">${t.timeoutBtn}</button>`;
                 return;
             }
 
@@ -267,13 +311,15 @@
                 container.innerHTML = `<p class="text-slate-400 font-bold text-xs uppercase mb-4">Ваш талон</p><h2 class="text-8xl font-black text-hamkor mb-8 tracking-tighter">${ticket.code}</h2><div class="bg-emerald-50 p-6 rounded-3xl w-full border border-emerald-100 mb-6"><p class="text-hamkor font-black animate-pulse">${t.wait}</p></div><div class="grid grid-cols-2 gap-4 w-full"><div class="bg-slate-50 p-4 rounded-2xl border border-slate-100 text-left"><p class="text-[10px] font-bold text-slate-400 uppercase mb-1">${t.queueInfo}</p><p class="text-2xl font-black text-slate-800">${beforeCount}</p></div><div class="bg-slate-50 p-4 rounded-2xl border border-slate-100 text-left"><p class="text-[10px] font-bold text-slate-400 uppercase mb-1">${t.timeInfo}</p><p class="text-2xl font-black text-slate-800">~${(beforeCount+1)*5} ${t.min}</p></div></div>`;
             } else if (ticket.status === 'calling') {
                 app.classList.add('calling-state');
-                container.innerHTML = `<div class="bg-white/20 p-4 rounded-full mb-8 animate-bounce text-white">🔔</div><h3 class="text-white font-bold mb-4 uppercase tracking-widest">${t.yourTurn}</h3><h2 class="text-9xl font-black text-white mb-8 drop-shadow-2xl">${ticket.code}</h2><div class="bg-white p-8 rounded-[40px] w-full shadow-2xl mb-6"><p class="text-hamkor text-2xl font-black">${t.window}</p></div>`;
+                container.innerHTML = `<div class="bg-white/20 p-4 rounded-full mb-4 animate-bounce text-white">🔔</div><h3 class="text-white font-bold mb-2 uppercase tracking-widest">${t.yourTurn}</h3><h2 class="text-9xl font-black text-white mb-6 drop-shadow-2xl">${ticket.code}</h2><div class="bg-white p-6 rounded-[30px] w-full shadow-2xl mb-6"><p class="text-hamkor text-2xl font-black mb-2">${t.window}</p><div class="text-slate-400 text-xs font-bold uppercase">${t.timer}: <span id="timer-display" class="text-red-500 text-xl font-black">${formatTime(timeLeft)}</span></div></div>`;
             } else if (ticket.status === 'serving') {
                 app.classList.remove('calling-state');
+                if (countdownTimer) clearInterval(countdownTimer);
                 container.innerHTML = `<div class="w-24 h-24 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mb-6 text-4xl animate-pulse">✓</div><h2 class="text-8xl font-black text-hamkor mb-4">${ticket.code}</h2><p class="text-emerald-600 font-bold uppercase text-lg tracking-[0.2em]">ОБСЛУЖИВАНИЕ...</p>`;
             } else if (ticket.status === 'completed' || ticket.status === 'cancelled') {
                 app.classList.remove('calling-state');
                 if (checkInterval) clearInterval(checkInterval);
+                if (countdownTimer) clearInterval(countdownTimer);
                 container.innerHTML = `<div class="text-7xl mb-6">${ticket.status === 'cancelled' ? '❌' : '🤝'}</div><h2 class="text-2xl font-black text-slate-900 mb-10">${ticket.status === 'cancelled' ? 'Талон отменен' : t.thanks}</h2><button onclick="window.clearTicket()" class="w-full bg-hamkor text-white py-5 rounded-2xl font-bold shadow-xl active:scale-95 transition-all">${t.back}</button>`;
             }
         }
@@ -283,7 +329,9 @@
             myTicketId = null;
             isTimedOut = false;
             lastStatus = null;
+            timeLeft = 180;
             if (checkInterval) clearInterval(checkInterval);
+            if (countdownTimer) clearInterval(countdownTimer);
             document.getElementById('status-view').classList.add('hidden');
             document.getElementById('reg-view').classList.remove('hidden');
             document.getElementById('app').classList.remove('calling-state');
