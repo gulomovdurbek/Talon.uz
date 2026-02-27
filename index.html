@@ -167,24 +167,6 @@
             if (phone.length < 17) return; 
             
             isTimedOut = false;
-
-            // ПРОВЕРКА: Нет ли уже активного талона для этого номера?
-            const { data: existingTicket } = await sb
-                .from('tickets')
-                .select('*')
-                .eq('phone', phone)
-                .in('status', ['waiting', 'calling', 'serving'])
-                .maybeSingle();
-
-            if (existingTicket) {
-                // Если талон найден, восстанавливаем его и переключаем вид
-                myTicketId = existingTicket.id;
-                localStorage.setItem('h_ticket_id', myTicketId);
-                startMonitoring();
-                return;
-            }
-
-            // Если активного талона нет, создаем новый
             const today = new Date().toISOString().split('T')[0];
             const { count } = await sb.from('tickets')
                 .select('*', { count: 'exact', head: true })
@@ -312,7 +294,9 @@
             function update() {
                 const now = Date.now();
                 const totalSec = 180;
+                // Считаем разницу во времени
                 const elapsedSec = Math.floor((now - callTime) / 1000);
+                // Убеждаемся, что не уходим в минус
                 const correctedElapsed = Math.max(0, elapsedSec);
                 const remaining = Math.max(0, totalSec - correctedElapsed);
                 
