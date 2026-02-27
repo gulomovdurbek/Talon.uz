@@ -27,6 +27,22 @@
         @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
         
         input:focus::placeholder { color: transparent; }
+
+        /* Стиль для уведомления */
+        #toast {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: #1e293b;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 12px;
+            font-size: 14px;
+            z-index: 1000;
+            transition: transform 0.3s ease;
+        }
+        #toast.show { transform: translateX(-50%) translateY(0); }
     </style>
 </head>
 <body class="antialiased">
@@ -79,15 +95,17 @@
         </main>
     </div>
 
+    <div id="toast"></div>
+
     <script>
         const SUPABASE_URL = 'https://agjoyykfosnttniilxqx.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFnam95eWtmb3NudHRuaWlseHF4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIwMDI2NzUsImV4cCI6MjA4NzU3ODY3NX0.4_tl_Zn5Ylv3_WQ5Sy7Wfjz-YNaSVDdpQva4uUDUs0s';
         const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         const langData = {
-            uz: { regTitle: "Elektron navbat", regDesc: "Bank xizmatlari markazi", labelPhone: "Telefon raqami", privacy: "O‘zbekiston Respublikasining «Shaxsga doir ma’lumotlar to‘g‘risida»gi Qonuniga muvofiq shaxsiy ma’lumotlarimni qayta ishlashga rozilik beraman.", srvK: "Kassa operatsiyalari", srvC: "Kredit mahsulotlari", wait: "NAVBTINGIZNI KUTING", yourTurn: "SIZNI CHAQIRISHMOQDA!", window: "1-DARCHAGA MARHAMAT", thanks: "Tashrif uchun rahmat!", back: "YANGI TALON", timer: "VAQT", timeout: "Chaqiruv vaqti tugadi", timeoutBtn: "Yangi talon olish", queueInfo: "Sizdan oldin", timeInfo: "Taxminiy kutish vaqti", min: "daq." },
-            ru: { regTitle: "Электронная очередь", regDesc: "Центр банковских услуг", labelPhone: "Номер телефона", privacy: "Настоящим подтверждаю свое согласие на сбор и обработку персональных данных в соответствии с Законом РУз №ЗРУ-547 «О персональных данных».", srvK: "Кассовые операции", srvC: "Кредитные продукты", wait: "ОЖИДАЙТЕ ВЫЗОВА", yourTurn: "ВАША ОЧЕРЕДЬ!", window: "ПРОЙДИТЕ К ОКНУ №1", thanks: "Спасибо за визит!", back: "НОВЫЙ ТАЛОН", timer: "ТАЙМЕР", timeout: "Время вызова истекло", timeoutBtn: "Получить новый талон", queueInfo: "Перед вами", timeInfo: "Примерное время ожидания", min: "мин." },
-            en: { regTitle: "E-Queue", regDesc: "Banking Services Center", labelPhone: "Phone Number", privacy: "I hereby consent to the collection and processing of my personal data in accordance with the Law of the Republic of Uzbekistan No. ZRU-547 'On Personal Data'.", srvK: "Cashier Operations", srvC: "Credit Products", wait: "PLEASE WAIT", yourTurn: "YOUR TURN!", window: "PROCEED TO WINDOW №1", thanks: "Thank you for visiting!", back: "NEW TICKET", timer: "TIMER", timeout: "Call time expired", timeoutBtn: "Get new ticket", queueInfo: "People before you", timeInfo: "Estimated wait time", min: "min." }
+            uz: { regTitle: "Elektron navbat", regDesc: "Bank xizmatlari markazi", labelPhone: "Telefon raqami", privacy: "O‘zbekiston Respublikasining «Shaxsga doir ma’lumotlar to‘g‘risida»gi Qonuniga muvofiq shaxsiy ma’lumotlarimni qayta ishlashga rozilik beraman.", srvK: "Kassa operatsiyalari", srvC: "Kredit mahsulotlari", wait: "NAVBTINGIZNI KUTING", yourTurn: "SIZNI CHAQIRISHMOQDA!", window: "1-DARCHAGA MARHAMAT", thanks: "Tashrif uchun rahmat!", back: "YANGI TALON", timer: "VAQT", timeout: "Chaqiruv vaqti tugadi", timeoutBtn: "Yangi talon olish", queueInfo: "Sizdan oldin", timeInfo: "Taxminiy kutish vaqti", min: "daq.", toast: "Faol taloningiz topildi" },
+            ru: { regTitle: "Электронная очередь", regDesc: "Центр банковских услуг", labelPhone: "Номер телефона", privacy: "Настоящим подтверждаю свое согласие на сбор и обработку персональных данных в соответствии с Законом РУз №ЗРУ-547 «О персональных данных».", srvK: "Кассовые операции", srvC: "Кредитные продукты", wait: "ОЖИДАЙТЕ ВЫЗОВА", yourTurn: "ВАША ОЧЕРЕДЬ!", window: "ПРОЙДИТЕ К ОКНУ №1", thanks: "Спасибо за визит!", back: "НОВЫЙ ТАЛОН", timer: "ТАЙМЕР", timeout: "Время вызова истекло", timeoutBtn: "Получить новый талон", queueInfo: "Перед вами", timeInfo: "Примерное время ожидания", min: "мин.", toast: "Найден активный талон" },
+            en: { regTitle: "E-Queue", regDesc: "Banking Services Center", labelPhone: "Phone Number", privacy: "I hereby consent to the collection and processing of my personal data in accordance with the Law of the Republic of Uzbekistan No. ZRU-547 'On Personal Data'.", srvK: "Cashier Operations", srvC: "Credit Products", wait: "PLEASE WAIT", yourTurn: "YOUR TURN!", window: "PROCEED TO WINDOW №1", thanks: "Thank you for visiting!", back: "NEW TICKET", timer: "TIMER", timeout: "Call time expired", timeoutBtn: "Get new ticket", queueInfo: "People before you", timeInfo: "Estimated wait time", min: "min.", toast: "Active ticket found" }
         };
 
         let currentLang = localStorage.getItem('h_lang') || 'ru';
@@ -104,6 +122,14 @@
             silence.resume();
             audioInited = true;
         };
+
+        // Функция показа уведомления
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            t.innerText = msg;
+            t.classList.add('show');
+            setTimeout(() => t.classList.remove('show'), 3000);
+        }
 
         document.getElementById('phone').addEventListener('input', function(e) {
             let x = e.target.value.replace(/\D/g, '').match(/(\d{0,3})(\d{0,2})(\d{0,3})(\d{0,2})(\d{0,2})/);
@@ -167,6 +193,22 @@
             if (phone.length < 17) return; 
             
             isTimedOut = false;
+
+            const { data: existingTicket } = await sb
+                .from('tickets')
+                .select('*')
+                .eq('phone', phone)
+                .in('status', ['waiting', 'calling', 'serving'])
+                .maybeSingle();
+
+            if (existingTicket) {
+                showToast(langData[currentLang].toast); // ТО САМОЕ УВЕДОМЛЕНИЕ
+                myTicketId = existingTicket.id;
+                localStorage.setItem('h_ticket_id', myTicketId);
+                startMonitoring();
+                return;
+            }
+
             const today = new Date().toISOString().split('T')[0];
             const { count } = await sb.from('tickets')
                 .select('*', { count: 'exact', head: true })
@@ -294,9 +336,7 @@
             function update() {
                 const now = Date.now();
                 const totalSec = 180;
-                // Считаем разницу во времени
                 const elapsedSec = Math.floor((now - callTime) / 1000);
-                // Убеждаемся, что не уходим в минус
                 const correctedElapsed = Math.max(0, elapsedSec);
                 const remaining = Math.max(0, totalSec - correctedElapsed);
                 
